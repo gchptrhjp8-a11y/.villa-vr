@@ -1,0 +1,97 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الفيلا | جولة الدور الأرضي الكامل</title><style>
+*{box-sizing:border-box}body{margin:0;background:#111;color:white;font-family:Tahoma,Arial;overflow:hidden}canvas{display:block;width:100vw;height:100vh}#info{position:fixed;right:18px;top:18px;background:#101719dd;border:1px solid #ffffff33;padding:15px 18px;border-radius:15px;max-width:310px;line-height:1.8;backdrop-filter:blur(9px)}#info b{color:#e9c898;font-size:18px}#room{font-size:20px}small{color:#d4d4d4}#controls{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,56px);gap:5px;direction:ltr}button{border:1px solid #f7dfb2;background:#252b2acc;color:#f7dfb2;border-radius:12px;height:49px;font-size:23px;cursor:pointer;touch-action:none}#hint{position:fixed;bottom:14px;right:18px;background:#121717a8;padding:8px 12px;border-radius:8px;font-size:12px}#map{position:fixed;left:14px;top:14px;width:200px;height:146px;border:1px solid #d9c7a777;border-radius:9px;background:#101617d9}#roompick{position:fixed;top:169px;left:14px;background:#202928;color:white;padding:8px;border:1px solid #aa9473;border-radius:8px;max-width:200px}option{background:#202928}@media(max-width:650px){#info{right:8px;top:8px;max-width:190px;padding:8px;font-size:11px}#info b{font-size:13px}#room{font-size:15px}#map{width:125px;height:95px;left:8px;top:8px}#roompick{top:110px;left:8px;max-width:125px;font-size:10px}#hint{display:none}}#refbtn{position:fixed;right:18px;bottom:18px;background:#292b28;color:#f4d7a5;border:1px solid #bca681;border-radius:10px;padding:11px;cursor:pointer;font-size:13px}#refpanel{display:none;position:fixed;inset:7% 8%;background:#111e;z-index:8;align-items:center;justify-content:center;flex-direction:column;gap:10px}#refpanel img{max-width:95%;max-height:83%;object-fit:contain}#refpanel button{padding:10px 25px;background:#d7b98c;color:#111;border:0;border-radius:8px;cursor:pointer}@media(max-width:650px){#refbtn{bottom:145px;right:8px;font-size:11px}}</style></head><body>
+<canvas id="v"></canvas><canvas id="map" width="240" height="175"></canvas><div id="info"><b>الدور الأرضي كامل | جولة تفاعلية</b><div id="room">صالة الاستقبال</div><small>رخام فاتح • كنب كريمي • خشب جوز • إضاءة دافئة</small><div><small>نموذج حركة كامل للأقسام، الأبعاد والمواد ليست مطابقة للصورة</small></div></div><select id="roompick"><option value="reception">صالة الاستقبال</option><option value="diwaniya">الديوانية</option><option value="living">المعيشة</option><option value="kitchen">المطبخ</option><option value="bedroom">غرفة النوم الرئيسية</option><option value="stairs">الدرج والمصعد</option><option value="wash">المغاسل والحمامات</option><option value="service">غسيل وكوي والمخزن</option></select><div id="hint">W/S حركة • A/D دوران • الماوس للسحب والتلفت</div><div id="controls"><span></span><button data-key="up">↑</button><span></span><button data-key="left">↶</button><button data-key="down">↓</button><button data-key="right">↷</button></div>
+<button id="refbtn" onclick="document.getElementById('refpanel').style.display='flex'">شوف المخطط المرجعي</button><div id="refpanel"><img src="reference.jpg" alt="مخطط الفيلا المرسل"><button onclick="document.getElementById('refpanel').style.display='none'">رجوع للجولة</button></div><script>
+const cv=document.getElementById('v'),c=cv.getContext('2d',{alpha:false}),mini=document.getElementById('map'),mc=mini.getContext('2d');
+let W,H;function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}addEventListener('resize',resize);resize();
+const map=[
+"111111111111111111111111",
+"100000000010000000000001",
+"100000000010000000000001",
+"100000000000000000000001",
+"100000000010000000000001",
+"111101111110111101111101",
+"100000000000000000000001",
+"100000000000000000000001",
+"100000000000000000000001",
+"100000000000000000000001",
+"111101111110111101111101",
+"100000000010000000000001",
+"100000000010000000000001",
+"100000000000000000000001",
+"100000000010000000000001",
+"111111111111111111111111"];
+const spots={reception:[17,13,-1.5],diwaniya:[5,12,-1.5],living:[5,7,-1.5],kitchen:[18,7,-1.5],bedroom:[17,2,-1.5],stairs:[10,7,0],wash:[9,12,0],service:[12,3,0]};
+let px=17,py=13,ang=-1.5;const keys={},zbuf=[];
+const furnishings=[
+[14,12,'sofa'],[20,12,'sofa'],[17,14,'table'],[17,11,'rug'],[13,14,'plant'],[21,14,'plant'],[17,12,'chandelier'],
+[3,12,'sofa'],[7,12,'sofa'],[5,14,'table'],[5,11,'rug'],[2,14,'plant'],[8,14,'lamp'],
+[4,7,'sofa'],[7,7,'table'],[3,8,'plant'],[5,8,'rug'],[9,7,'lamp'],
+[16,7,'island'],[20,7,'cabinet'],[18,8,'stool'],[15,8,'plant'],
+[17,2,'bed'],[20,3,'cabinet'],[14,3,'lamp'],[17,4,'rug'],
+[5,2,'sofa'],[7,3,'plant'],[5,3,'table']
+];
+function sprite(type){
+let s=document.createElement('canvas');s.width=180;s.height=200;let t=s.getContext('2d');t.shadowColor='#0008';t.shadowBlur=12;
+const rect=(x,y,w,h,color)=>{t.fillStyle=color;t.fillRect(x,y,w,h)};
+const poly=(pts,color)=>{t.fillStyle=color;t.beginPath();t.moveTo(...pts[0]);for(let p of pts.slice(1))t.lineTo(...p);t.closePath();t.fill()};
+if(type==='sofa'){rect(22,85,136,64,'#a38d73');rect(15,95,18,62,'#cabaa7');rect(147,95,18,62,'#cabaa7');rect(34,102,112,52,'#efe5d5');rect(31,68,118,43,'#e3d5bf');rect(40,82,45,20,'#f6ead8');rect(95,82,45,20,'#f6ead8');rect(40,114,43,31,'#f9f1e6');rect(94,114,43,31,'#f4ebdf');rect(40,155,13,10,'#8b704f');rect(125,155,13,10,'#8b704f')}
+if(type==='table'||type==='island'){rect(42,110,15,50,'#8b765e');rect(122,110,15,50,'#8b765e');poly([[20,100],[145,100],[160,119],[36,119]],'#b9aa98');rect(21,94,124,15,type==='island'?'#f5f2e9':'#d8cbb9');rect(29,97,107,2,'#a2a0a0');if(type==='island'){rect(76,89,24,5,'#b8a78e')}}
+if(type==='rug'){t.shadowBlur=0;poly([[5,158],[175,158],[149,177],[32,177]],'#b8a99b');poly([[24,159],[158,159],[145,171],[40,171]],'#e4d8c9')}
+if(type==='plant'){rect(84,113,13,44,'#4a5639');for(let i=0;i<8;i++){let x=90+Math.sin(i*2.1)*45,y=83+Math.cos(i*1.8)*33;poly([[90,125],[x-19,y],[x+20,y+5]],i%2?'#617c57':'#3e6649')}poly([[65,145],[114,145],[106,183],[74,183]],'#d4c2a6')}
+if(type==='lamp'){rect(85,86,9,88,'#a88858');poly([[62,75],[115,75],[128,112],[50,112]],'#f5dfb5');rect(62,108,65,5,'#c6a16e')}
+if(type==='chandelier'){rect(88,3,4,38,'#c7a467');for(let i=0;i<5;i++){let xx=45+i*23;rect(xx,46,17,36,'#f4d7a4');rect(xx+4,42,9,4,'#e8c98b')}rect(42,42,110,4,'#c5a46d')}
+if(type==='bed'){rect(21,50,138,42,'#ac8e73');rect(15,65,150,32,'#d2bba0');poly([[23,97],[157,97],[173,160],[7,160]],'#f1ede6');rect(33,97,50,26,'#fff');rect(96,97,50,26,'#fff');poly([[7,147],[173,147],[166,166],[14,166]],'#b6a99b')}
+if(type==='cabinet'){rect(25,28,130,148,'#6d4e39');rect(33,36,57,132,'#97795c');rect(93,36,54,132,'#ad9271');rect(85,86,2,28,'#e4c690');rect(97,86,2,28,'#e4c690')}
+if(type==='stool'){rect(50,100,80,16,'#bfa68b');rect(61,116,10,51,'#4f4236');rect(109,116,10,51,'#4f4236')}
+return s}
+const sprites={};for(const f of furnishings)sprites[f[2]]=sprite(f[2]);
+function solid(x,y){return map[Math.floor(y)]?.[Math.floor(x)]!=='0'}
+function move(d){let nx=px+Math.cos(ang)*d,ny=py+Math.sin(ang)*d;if(!solid(nx+Math.sign(d*Math.cos(ang))*.2,py))px=nx;if(!solid(px,ny+Math.sign(d*Math.sin(ang))*.2))py=ny}
+function roomName(){if(py>10)return px<11?'الديوانية':'صالة الاستقبال';if(py>5)return px<12?'المعيشة والممر':'المطبخ';return px<11?'غرفة الضيوف':'غرفة النوم الرئيسية'}
+function render(){
+let horizon=H*.47,scale=Math.min(W,H)*.78;
+let sky=c.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#34312e');sky.addColorStop(1,'#f5e9d8');c.fillStyle=sky;c.fillRect(0,0,W,horizon);
+c.fillStyle='#f1e5d4';c.fillRect(0,horizon,W,H-horizon);
+let step=Math.max(2,Math.ceil(W/650));
+for(let xx=0;xx<W;xx+=step){
+let camera=(xx/W-.5)*1.23,ray=ang+Math.atan(camera),dx=Math.cos(ray),dy=Math.sin(ray),dist=0;
+while(dist<32&&!solid(px+dx*dist,py+dy*dist))dist+=.032;
+let dep=dist*Math.cos(ray-ang),wallh=Math.min(H*3,scale/Math.max(.15,dep)),top=horizon-wallh*.57;
+let hitx=px+dx*dist,hity=py+dy*dist,frac=(Math.abs(dx)>Math.abs(dy)?hity:hitx)%1;
+let base=Math.max(.43,1-dep*.045),line=(frac<.025||frac>.975),r=Math.round((line?170:233)*base),g=Math.round((line?151:218)*base),b=Math.round((line?129:195)*base);
+c.fillStyle=`rgb(${r},${g},${b})`;c.fillRect(xx,top,step+1,wallh);
+c.fillStyle=`rgba(125,91,57,${.3*base})`;c.fillRect(xx,top+wallh*.83,step+1,Math.max(2,wallh*.025));
+c.fillStyle=`rgba(255,250,226,${.6*base})`;c.fillRect(xx,top+wallh*.035,step+1,Math.max(2,wallh*.018));
+if(frac>.07&&frac<.09){c.fillStyle=`rgba(151,118,77,${.38*base})`;c.fillRect(xx,top,step+1,wallh)}
+zbuf[Math.floor(xx/step)]=dep;
+}
+// floor marble with perspective horizontal bands and grout grid
+for(let sy=Math.max(0,Math.floor(horizon));sy<H;sy+=3){
+let row=(sy-horizon)/H,depth=.52/(row+.025),shade=Math.min(1,1/(depth*.09+1));
+c.fillStyle=`rgba(245,239,226,${.25*shade})`;c.fillRect(0,sy,W,3);
+let worldx=px+Math.cos(ang)*depth,worldy=py+Math.sin(ang)*depth;
+let grout=(Math.abs(worldx%1)<.06||Math.abs(worldy%1)<.06);
+if(grout){c.fillStyle='rgba(143,127,107,.11)';c.fillRect(0,sy,W,1)}
+}
+let visible=furnishings.map(f=>({f,d:Math.hypot(f[0]-px,f[1]-py)})).sort((a,b)=>b.d-a.d);
+for(let o of visible){let [fx,fy,type]=o.f,theta=Math.atan2(fy-py,fx-px)-ang;theta=Math.atan2(Math.sin(theta),Math.cos(theta));if(Math.abs(theta)>1.0||o.d<.3)continue;
+let depth=o.d*Math.cos(theta),height=Math.min(H*2,scale/depth*(type==='chandelier'?.85:.9)),width=height*.9;
+let center=W/2+Math.tan(theta)*W*.82,left=center-width/2;
+let col=Math.floor(Math.max(0,Math.min(W-1,center))/step);if(zbuf[col]!==undefined&&depth>zbuf[col]+.2)continue;
+let sy=type==='chandelier'?horizon-height*.83:horizon+scale/depth*.35-height;
+c.drawImage(sprites[type],left,sy,width,height);
+}
+c.fillStyle='#e4c18a';c.fillRect(W/2-5,H*.5,10,1);c.fillRect(W/2,H*.5-5,1,10);
+mc.clearRect(0,0,240,175);mc.fillStyle='#101918';mc.fillRect(0,0,240,175);for(let y=0;y<16;y++)for(let x=0;x<24;x++){mc.fillStyle=map[y][x]==='1'?'#b8a384':'#34423e';mc.fillRect(x*9+12,y*9+10,8,8)}
+mc.fillStyle='#f5c777';mc.beginPath();mc.arc(px*9+12,py*9+10,4,0,7);mc.fill();mc.strokeStyle='#f5c777';mc.beginPath();mc.moveTo(px*9+12,py*9+10);mc.lineTo((px+Math.cos(ang)*2)*9+12,(py+Math.sin(ang)*2)*9+10);mc.stroke();
+document.getElementById('room').textContent=roomName();
+if(keys.up)move(.09);if(keys.down)move(-.09);if(keys.left)ang-=.047;if(keys.right)ang+=.047;
+requestAnimationFrame(render)}
+document.getElementById('roompick').onchange=e=>{[px,py,ang]=spots[e.target.value]};
+const bindings={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+addEventListener('keydown',e=>{if(bindings[e.code]){keys[bindings[e.code]]=true;e.preventDefault()}});addEventListener('keyup',e=>{if(bindings[e.code])keys[bindings[e.code]]=false});
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;b.onpointerdown=e=>{keys[k]=true;b.setPointerCapture(e.pointerId)};for(let name of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(name,()=>keys[k]=false)});
+let drag=false,last=0;cv.onpointerdown=e=>{drag=true;last=e.clientX};cv.onpointermove=e=>{if(drag){ang+=(e.clientX-last)*.006;last=e.clientX}};cv.onpointerup=()=>drag=false;
+render();
+</script></body></html>
